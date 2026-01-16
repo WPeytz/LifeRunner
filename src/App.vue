@@ -55,12 +55,6 @@ function handleMainMenu() {
   closeSettings()
 }
 
-function handleRestart() {
-  gameStore.startNewGame()
-  router.push('/')
-  closeSettings()
-}
-
 function handleSignUp() {
   authMode.value = 'signup'
   showAuthModal.value = true
@@ -185,10 +179,6 @@ onUnmounted(() => {
       <button class="dropdown-item" @click="handleMainMenu">
         <span class="dropdown-icon">🏠</span>
         Main Menu
-      </button>
-      <button class="dropdown-item" @click="handleRestart">
-        <span class="dropdown-icon">🔄</span>
-        Restart LifeRun
       </button>
       <template v-if="isAuthenticated">
         <div class="dropdown-user">{{ user?.email }}</div>

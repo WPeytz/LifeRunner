@@ -30,8 +30,15 @@ function startGame() {
   }
 }
 
+function fadeToGame() {
+  introFading.value = true
+  setTimeout(() => {
+    router.push('/game')
+  }, 500)
+}
+
 function skipToGame() {
-  router.push('/game')
+  fadeToGame()
 }
 
 function introSignUp() {
@@ -59,7 +66,8 @@ function switchAuthMode() {
 }
 
 function onAuthenticated() {
-  router.push('/game')
+  showAuthModal.value = false
+  fadeToGame()
 }
 
 async function handleSignOut() {
