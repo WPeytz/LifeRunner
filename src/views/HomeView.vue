@@ -13,10 +13,21 @@ const { user, isAuthenticated } = storeToRefs(authStore)
 const showAchievements = ref(false)
 const showAuthModal = ref(false)
 const showIntro = ref(false)
+const introFading = ref(false)
 const authMode = ref<'signin' | 'signup'>('signin')
 
 function startGame() {
   showIntro.value = true
+
+  // If already authenticated, auto-redirect after 3 seconds
+  if (isAuthenticated.value) {
+    setTimeout(() => {
+      introFading.value = true
+    }, 2500)
+    setTimeout(() => {
+      router.push('/game')
+    }, 3000)
+  }
 }
 
 function skipToGame() {
@@ -68,12 +79,12 @@ async function handleSignOut() {
     />
 
     <!-- Intro Screen -->
-    <div v-if="showIntro" class="intro-content">
+    <div v-if="showIntro" class="intro-content" :class="{ 'fade-out': introFading }">
       <div class="intro-text">
         <p class="intro-line">You're 18, broke, and full of potential.</p>
         <p class="intro-line highlight">Your life begins with a choice.</p>
       </div>
-      <div class="intro-buttons">
+      <div v-if="!isAuthenticated" class="intro-buttons">
         <button class="menu-btn primary" @click="introSignUp">
           Sign Up <br> (Save your life, track your journey)
         </button>
@@ -81,7 +92,7 @@ async function handleSignOut() {
           Log In <br> (Continue your journey)
         </button>
         <button class="menu-btn skip" @click="skipToGame">
-          Skip <br> (Play as guest. Your life won’t be saved.)
+          Skip <br> (Play as guest. Your life won't be saved.)
         </button>
       </div>
     </div>
@@ -276,6 +287,11 @@ async function handleSignOut() {
   max-width: 500px;
   width: 100%;
   text-align: center;
+  transition: opacity 0.5s ease-out;
+}
+
+.intro-content.fade-out {
+  opacity: 0;
 }
 
 .intro-text {
