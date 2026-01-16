@@ -62,17 +62,14 @@ onMounted(() => {
 
 .logo {
   font-size: 4rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
   animation: slideUp 0.6s ease-out;
-}
-
-.life {
-  color: #e94560;
-}
-
-.runner {
-  color: #ffffff;
+  background: linear-gradient(135deg, #e94560 0%, #f97316 50%, #ffd700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
 }
 
 .tagline {
