@@ -9,6 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   switchMode: []
+  authenticated: []
 }>()
 
 const authStore = useAuthStore()
@@ -44,16 +45,15 @@ async function handleSubmit() {
     if (isSignUp.value) {
       const result = await authStore.signUp(email.value, password.value)
       if (result.success) {
-        successMessage.value = 'Check your email to confirm your account!'
-        email.value = ''
-        password.value = ''
-        confirmPassword.value = ''
+        emit('authenticated')
+        emit('close')
       } else {
         localError.value = result.error || 'Sign up failed'
       }
     } else {
       const result = await authStore.signIn(email.value, password.value)
       if (result.success) {
+        emit('authenticated')
         emit('close')
       } else {
         localError.value = result.error || 'Sign in failed'

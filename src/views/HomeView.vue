@@ -47,6 +47,10 @@ function switchAuthMode() {
   authMode.value = authMode.value === 'signin' ? 'signup' : 'signin'
 }
 
+function onAuthenticated() {
+  router.push('/game')
+}
+
 async function handleSignOut() {
   await authStore.signOut()
 }
@@ -60,6 +64,7 @@ async function handleSignOut() {
       :mode="authMode"
       @close="showAuthModal = false"
       @switch-mode="switchAuthMode"
+      @authenticated="onAuthenticated"
     />
 
     <!-- Intro Screen -->
