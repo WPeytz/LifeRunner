@@ -12,10 +12,25 @@ const { user, isAuthenticated } = storeToRefs(authStore)
 
 const showAchievements = ref(false)
 const showAuthModal = ref(false)
+const showIntro = ref(false)
 const authMode = ref<'signin' | 'signup'>('signin')
 
 function startGame() {
+  showIntro.value = true
+}
+
+function skipToGame() {
   router.push('/game')
+}
+
+function introSignUp() {
+  authMode.value = 'signup'
+  showAuthModal.value = true
+}
+
+function introLogIn() {
+  authMode.value = 'signin'
+  showAuthModal.value = true
 }
 
 function openSignUp() {
@@ -47,10 +62,30 @@ async function handleSignOut() {
       @switch-mode="switchAuthMode"
     />
 
-    <div class="title-content">
+    <!-- Intro Screen -->
+    <div v-if="showIntro" class="intro-content">
+      <div class="intro-text">
+        <p class="intro-line">You're 18, broke, and full of potential.</p>
+        <p class="intro-line highlight">Your life begins with a choice.</p>
+      </div>
+      <div class="intro-buttons">
+        <button class="menu-btn primary" @click="introSignUp">
+          Sign Up <br> (Save your life, track your journey)
+        </button>
+        <button class="menu-btn secondary" @click="introLogIn">
+          Log In <br> (Continue your journey)
+        </button>
+        <button class="menu-btn skip" @click="skipToGame">
+          Skip <br> (Play as guest. Your life won’t be saved.)
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Title Screen -->
+    <div v-else class="title-content">
       <div class="logo-section">
         <h1 class="game-title">LifeRunner</h1>
-        <p class="tagline">Live your best life. Make every choice count.</p>
+        <p class="tagline">A life simulator where every decision shapes your future. Career, money, happiness - choose wisely.</p>
       </div>
 
       <div class="menu-buttons">
@@ -66,17 +101,10 @@ async function handleSignOut() {
             Sign Out
           </button>
         </div>
-        <div v-else class="auth-buttons">
-          <button class="menu-btn auth" @click="openSignUp">
-            Sign Up
-          </button>
-          <button class="menu-btn auth" @click="openLogIn">
-            Log In
-          </button>
-        </div>
       </div>
 
       <div class="footer-info">
+        <a href="https://discord.gg/CXa4wJJgrc" target="_blank" class="discord-link">Join the Discord to give feedback</a>
         <p class="version">Version: Alpha 0.1</p>
       </div>
     </div>
@@ -214,9 +242,73 @@ async function handleSignOut() {
   left: 1rem;
 }
 
+.discord-link {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 0.25rem;
+  transition: color 0.2s ease;
+}
+
+.discord-link:hover {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: underline;
+}
+
 .version {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.3);
   margin: 0;
+}
+
+/* Intro Screen */
+.intro-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3rem;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.intro-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.intro-line {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: 500;
+}
+
+.intro-line.highlight {
+  color: #e94560;
+  font-weight: 600;
+}
+
+.intro-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.menu-btn.skip {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.menu-btn.skip:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
 }
 </style>

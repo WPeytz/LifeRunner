@@ -323,7 +323,7 @@ function onPlayAgain() {
 
       <footer class="bottom-bar">
         <button
-          v-if="canGoNext && !showSummary"
+          v-if="canGoNext && !showSummary && selectionPhase !== 'decisions'"
           class="nav-btn next-btn"
           @click="gameStore.nextPhase"
         >
@@ -356,6 +356,11 @@ function onPlayAgain() {
           Live This Chapter
         </button>
       </footer>
+    </div>
+
+    <div class="footer-info">
+      <a href="https://discord.gg/CXa4wJJgrc" target="_blank" class="discord-link">Join the Discord to give feedback</a>
+      <p class="version">Version: Alpha 0.1</p>
     </div>
   </main>
 </template>
@@ -669,5 +674,32 @@ function onPlayAgain() {
   color: rgba(255, 255, 255, 0.5);
   padding: 2rem;
   font-size: 1rem;
+}
+
+.footer-info {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 10;
+}
+
+.discord-link {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 0.25rem;
+  transition: color 0.2s ease;
+}
+
+.discord-link:hover {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: underline;
+}
+
+.version {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin: 0;
 }
 </style>

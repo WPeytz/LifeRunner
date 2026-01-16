@@ -50,6 +50,11 @@ function closeSettings() {
   isSettingsOpen.value = false
 }
 
+function handleMainMenu() {
+  router.push('/')
+  closeSettings()
+}
+
 function handleRestart() {
   gameStore.startNewGame()
   router.push('/')
@@ -143,9 +148,9 @@ onUnmounted(() => {
     <source src="/music/background.mp3" type="audio/mpeg" />
   </audio>
 
-  <!-- Buy Full Version Button (hidden for premium users) -->
+  <!-- Upgrade Button (hidden for premium users) -->
   <button v-if="!isLoading && !isPremium" class="buy-full-version" @click="handleBuyFullVersion">
-    Buy Full Version
+    Upgrade LifeRunner
   </button>
 
   <!-- Premium Badge -->
@@ -177,6 +182,10 @@ onUnmounted(() => {
     </button>
 
     <div v-if="isSettingsOpen" class="settings-dropdown">
+      <button class="dropdown-item" @click="handleMainMenu">
+        <span class="dropdown-icon">🏠</span>
+        Main Menu
+      </button>
       <button class="dropdown-item" @click="handleRestart">
         <span class="dropdown-icon">🔄</span>
         Restart LifeRun
