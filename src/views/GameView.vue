@@ -359,7 +359,7 @@ function onPlayAgain() {
     </div>
 
     <div class="footer-info">
-      <a href="https://discord.gg/CXa4wJJgrc" target="_blank" class="discord-link">Join the Discord to give feedback</a>
+      <a v-if="false" href="https://discord.gg/CXa4wJJgrc" target="_blank" class="discord-link">Join the Discord to give feedback</a>
       <p class="version">Version: Alpha 0.1</p>
     </div>
   </main>

@@ -142,8 +142,8 @@ onUnmounted(() => {
     <source src="/music/background.mp3" type="audio/mpeg" />
   </audio>
 
-  <!-- Upgrade Button (hidden for premium users) -->
-  <button v-if="!isLoading && !isPremium" class="buy-full-version" @click="handleBuyFullVersion">
+  <!-- Upgrade Button (hidden) -->
+  <button v-if="false" class="buy-full-version" @click="handleBuyFullVersion">
     Upgrade LifeRunner
   </button>
 
