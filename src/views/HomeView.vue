@@ -19,15 +19,13 @@ const authMode = ref<'signin' | 'signup'>('signin')
 function startGame() {
   showIntro.value = true
 
-  // If already authenticated, auto-redirect after 3 seconds
-  if (isAuthenticated.value) {
-    setTimeout(() => {
-      introFading.value = true
-    }, 2500)
-    setTimeout(() => {
-      router.push('/game')
-    }, 3000)
-  }
+  // Show the intro text briefly, then go straight to the game
+  setTimeout(() => {
+    introFading.value = true
+  }, 2500)
+  setTimeout(() => {
+    router.push('/game')
+  }, 3000)
 }
 
 function fadeToGame() {
@@ -92,7 +90,7 @@ async function handleSignOut() {
         <p class="intro-line">You're 18, broke, and full of potential.</p>
         <p class="intro-line highlight">Your life begins with a choice.</p>
       </div>
-      <div v-if="!isAuthenticated" class="intro-buttons">
+      <div v-if="false" class="intro-buttons">
         <button class="menu-btn primary" @click="introSignUp">
           Sign Up <br> (Save your life, track your journey)
         </button>
