@@ -6,6 +6,7 @@ import { getRandomEventsForStage, type RandomEvent } from '@/data/randomEvents';
 import type { Card, Stats, LifeStage, SelectionPhase } from '@/types/game';
 
 export type GamePhase = 'idle' | 'choosing' | 'events' | 'resolving' | 'ended';
+export type LocationEnvironment = 'home' | 'countryside' | 'suburb' | 'city' | 'country';
 
 export const useGameStore = defineStore('game', () => {
   const stageIndex = ref(0); // 0-9 for 10 stages
@@ -53,6 +54,11 @@ export const useGameStore = defineStore('game', () => {
 
   // Track previous relationship selection for defaults
   const previousRelationshipSelection = ref<Card | null>(null);
+
+  // The environment committed at the end of the previous stage. Location
+  // selections are reset each stage, but "Don't Move" should keep this scene.
+  const committedLocationScene = ref<LocationEnvironment>('home');
+  const committedCountryId = ref<string | null>(null);
 
   // Year results tracking
   const lastPlayedCards = ref<Card[]>([]);
@@ -374,6 +380,24 @@ export const useGameStore = defineStore('game', () => {
     return universityMajors.some(majorId => playedCardIds.value.has(majorId));
   });
 
+  function isAtStartingLocation(): boolean {
+    if (!startingLocation.value) return false;
+
+    const locationIds = locationSelections.value.map(card => card.id);
+    const selectedCity = locationSelections.value.find(card => card.id.startsWith('city_'));
+    const selectedCountry = locationSelections.value.find(card => card.id.startsWith('country_'));
+
+    // Use this stage's intended destination so housing availability updates
+    // before the move is committed at the end of the stage.
+    if (selectedCity) return selectedCity.id === startingLocation.value;
+    if (selectedCountry) return false;
+    if (locationIds.some(id => ['loc_countryside', 'loc_suburb', 'loc_city', 'loc_abroad'].includes(id))) {
+      return false;
+    }
+
+    return currentLocation.value === startingLocation.value;
+  }
+
   // Get sub-options for the currently active top-level category only
   const activeSubOptions = computed(() => {
     if (!activeTopLevelCategory.value) return [];
@@ -403,6 +427,11 @@ export const useGameStore = defineStore('game', () => {
     // If this is the work category, hide full-time job if pursuing full-time education (university, community college, trade school)
     if (activeTopLevelCategory.value === 'income_work' && hasQualifyingEducation.value) {
       subOptionIds = subOptionIds.filter(id => id !== 'full_time_job');
+    }
+
+    // Parents' home is only an option while the player is in their original city.
+    if (activeTopLevelCategory.value === 'expense_housing' && !isAtStartingLocation()) {
+      subOptionIds = subOptionIds.filter(id => id !== 'housing_parents');
     }
 
     // If this is the career category, only show WSOP if player is a poker player in Vegas
@@ -451,6 +480,7 @@ export const useGameStore = defineStore('game', () => {
 
   // Track current location (city or country)
   const currentLocation = ref<string | null>(null);
+  const startingLocation = ref<string | null>(null);
 
   // Get third-level sub-options (sub-options of sub-options) - only for active category
   const activeThirdLevelOptions = computed(() => {
@@ -658,6 +688,23 @@ export const useGameStore = defineStore('game', () => {
     expenseSelections.value = defaultExpenses;
   }
 
+  function ensureHousingSelectionAllowed() {
+    if (isAtStartingLocation() || !expenseSelections.value.some(card => card.id === 'housing_parents')) {
+      return;
+    }
+
+    expenseSelections.value = expenseSelections.value.filter(card => card.id !== 'housing_parents');
+    const housingCategory = getCardById('expense_housing');
+    const budgetApartment = getCardById('housing_rent_cheap');
+
+    if (housingCategory && !expenseSelections.value.some(card => card.id === housingCategory.id)) {
+      expenseSelections.value.push(housingCategory);
+    }
+    if (budgetApartment && !expenseSelections.value.some(card => card.parentId === 'expense_housing')) {
+      expenseSelections.value.push(budgetApartment);
+    }
+  }
+
   function setDefaultDecisions() {
     // Set default decision options
     const defaultDecisions: Card[] = [];
@@ -789,6 +836,8 @@ export const useGameStore = defineStore('game', () => {
     resumeHistory.value = [];
     previousExpenseSelections.value = [];
     previousRelationshipSelection.value = null;
+    committedLocationScene.value = 'home';
+    committedCountryId.value = null;
     randomUniversityMajors.value = [];
     randomCities.value = [];
     randomCountries.value = [];
@@ -812,6 +861,7 @@ export const useGameStore = defineStore('game', () => {
     portfolio.value = [];
     // Set random starting city
     const randomStartingCity = allCityIds[Math.floor(Math.random() * allCityIds.length)];
+    startingLocation.value = randomStartingCity;
     currentLocation.value = randomStartingCity;
     playedCardIds.value.add(randomStartingCity); // Mark as played so location-specific jobs unlock
     drawHand();
@@ -899,6 +949,7 @@ export const useGameStore = defineStore('game', () => {
 
     // Copy the previous selections
     expenseSelections.value = [...previousExpenseSelections.value];
+    ensureHousingSelectionAllowed();
 
     // Mark all expense categories as visited
     previousExpenseSelections.value.forEach(card => {
@@ -996,6 +1047,8 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function toggleCardSelection(card: Card) {
+    if (card.id === 'housing_parents' && !isAtStartingLocation()) return;
+
     // Get the right selection array based on current phase
     let selections: Card[];
     switch (selectionPhase.value) {
@@ -1397,6 +1450,7 @@ export const useGameStore = defineStore('game', () => {
       selectionPhase.value = 'income';
     } else if (selectionPhase.value === 'income') {
       incomeSelections.value = clearParentCards(incomeSelections.value);
+      ensureHousingSelectionAllowed();
       selectionPhase.value = 'expenses';
     } else if (selectionPhase.value === 'expenses') {
       expenseSelections.value = clearParentCards(expenseSelections.value);
@@ -1420,6 +1474,7 @@ export const useGameStore = defineStore('game', () => {
     // No more categories before this, move to previous phase
     if (selectionPhase.value === 'decisions') {
       decisionSelections.value = clearParentCards(decisionSelections.value);
+      ensureHousingSelectionAllowed();
       selectionPhase.value = 'expenses';
     } else if (selectionPhase.value === 'expenses') {
       expenseSelections.value = clearParentCards(expenseSelections.value);
@@ -1448,12 +1503,15 @@ export const useGameStore = defineStore('game', () => {
     } else if (selectionPhase.value === 'decisions') {
       decisionSelections.value = clearParentCards(decisionSelections.value);
     }
+    if (targetPhase === 'expenses') ensureHousingSelectionAllowed();
     selectionPhase.value = targetPhase;
     // Close any open sub-options panel
     activeTopLevelCategory.value = null;
   }
 
   function playStage() {
+    ensureHousingSelectionAllowed();
+
     // Combine all selections from all phases
     const allSelections = [...locationSelections.value, ...educationSelections.value, ...incomeSelections.value, ...expenseSelections.value, ...decisionSelections.value];
     if (allSelections.length === 0) return;
@@ -1472,6 +1530,31 @@ export const useGameStore = defineStore('game', () => {
     lastRiskEvents.value = [];
     lastTriggeredEvents.value = [];
     lastPlayedCards.value = [...selectedCards.value];
+
+    // Commit this stage's move before the temporary selections are cleared.
+    // Choosing "Don't Move" intentionally leaves the previous home unchanged.
+    const locationIds = locationSelections.value.map(card => card.id);
+    const selectedCountryCard = locationSelections.value.find(card => card.id.startsWith('country_'));
+    const selectedCityCard = locationSelections.value.find(card => card.id.startsWith('city_'));
+    if (locationIds.includes('loc_countryside')) {
+      committedLocationScene.value = 'countryside';
+      committedCountryId.value = null;
+      currentLocation.value = 'loc_countryside';
+    } else if (locationIds.includes('loc_suburb')) {
+      committedLocationScene.value = 'suburb';
+      committedCountryId.value = null;
+      currentLocation.value = 'loc_suburb';
+    } else if (locationIds.includes('loc_city') || selectedCityCard) {
+      committedLocationScene.value = 'city';
+      committedCountryId.value = null;
+      if (selectedCityCard) currentLocation.value = selectedCityCard.id;
+    } else if (locationIds.includes('loc_abroad') || selectedCountryCard) {
+      committedLocationScene.value = 'country';
+      if (selectedCountryCard) {
+        committedCountryId.value = selectedCountryCard.id;
+        currentLocation.value = selectedCountryCard.id;
+      }
+    }
 
     // Generate random events for this stage
     stageRandomEvents.value = getRandomEventsForStage();
@@ -1916,6 +1999,8 @@ export const useGameStore = defineStore('game', () => {
     currentLocation,
     resumeHistory,
     previousExpenseSelections,
+    committedLocationScene,
+    committedCountryId,
     startNewGame,
     drawHand,
     toggleCardSelection,

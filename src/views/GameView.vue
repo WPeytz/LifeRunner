@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useGameStore } from '@/stores/game'
+import { useGameStore, type LocationEnvironment } from '@/stores/game'
 import { storeToRefs } from 'pinia'
 import StatsBar from '@/components/game/StatsBar.vue'
 import ManaBar from '@/components/game/ManaBar.vue'
@@ -12,6 +12,11 @@ import GameOverScreen from '@/components/game/GameOverScreen.vue'
 import EventsAnimation from '@/components/game/EventsAnimation.vue'
 import ResumeModal from '@/components/game/ResumeModal.vue'
 import AchievementsModal from '@/components/game/AchievementsModal.vue'
+import AvatarPortrait from '@/components/avatar/AvatarPortrait.vue'
+import HomeBackdrop from '@/components/avatar/HomeBackdrop.vue'
+import WorkBackdrop from '@/components/avatar/WorkBackdrop.vue'
+import LifestyleBackdrop from '@/components/avatar/LifestyleBackdrop.vue'
+import ExpenseItemsOverlay from '@/components/avatar/ExpenseItemsOverlay.vue'
 
 const gameStore = useGameStore()
 const {
@@ -32,6 +37,10 @@ const {
   expenseSelections,
   decisionSelections,
   previousExpenseSelections,
+  activeTopLevelCategory,
+  committedLocationScene,
+  committedCountryId,
+  eliteSchoolApplications,
 } = storeToRefs(gameStore)
 
 const showTutorial = ref(false)
@@ -39,6 +48,207 @@ const highlightedCardId = ref<string | null>(null)
 const showSummary = ref(false)
 const showResume = ref(false)
 const showAchievements = ref(false)
+
+const countryFlags: Record<string, string> = {
+  country_canada: '🇨🇦',
+  country_china: '🇨🇳',
+  country_brazil: '🇧🇷',
+  country_australia: '🇦🇺',
+  country_india: '🇮🇳',
+  country_argentina: '🇦🇷',
+  country_mexico: '🇲🇽',
+  country_indonesia: '🇮🇩',
+  country_germany: '🇩🇪',
+  country_france: '🇫🇷',
+  country_uk: '🇬🇧',
+  country_italy: '🇮🇹',
+  country_spain: '🇪🇸',
+  country_denmark: '🇩🇰',
+}
+
+const selectedCountry = computed(() =>
+  locationSelections.value.find(card => card.id.startsWith('country_')),
+)
+
+const locationScene = computed<LocationEnvironment>(() => {
+  const ids = locationSelections.value.map(card => card.id)
+  if (ids.some(id => id === 'loc_countryside')) return 'countryside'
+  if (ids.some(id => id === 'loc_suburb')) return 'suburb'
+  if (ids.some(id => id === 'loc_city' || id.startsWith('city_'))) return 'city'
+  if (ids.some(id => id === 'loc_abroad' || id.startsWith('country_'))) return 'country'
+  return committedLocationScene.value
+})
+
+type BackdropScene =
+  | LocationEnvironment
+  | 'community-college'
+  | 'university'
+  | 'harvard'
+  | 'mit'
+  | 'trade-school'
+  | 'self-study'
+  | 'self-coding'
+  | 'self-language'
+  | 'self-cooking'
+  | 'self-music'
+  | 'self-photography'
+  | 'workplace'
+
+type JobTheme =
+  | 'generic' | 'retail' | 'restaurant' | 'cafe' | 'warehouse' | 'call-center'
+  | 'office' | 'tech' | 'healthcare' | 'finance' | 'education' | 'engineering'
+  | 'electrician' | 'plumber' | 'mechanic' | 'legal' | 'casino' | 'film'
+  | 'government' | 'driving' | 'marketing' | 'laboratory' | 'nonprofit' | 'remote'
+
+type TradeFocus = '' | 'electrician' | 'plumber' | 'hvac' | 'welder' | 'automotive'
+
+type LifestyleScene =
+  | 'housing-parents' | 'housing-roommates' | 'housing-budget' | 'housing-nice' | 'housing-home'
+  | 'transport-walk' | 'transport-public' | 'transport-used' | 'transport-new' | 'transport-luxury'
+
+const tradeFocus = computed<TradeFocus>(() => {
+  const ids = educationSelections.value.map(card => card.id)
+  if (ids.includes('trade_electrician')) return 'electrician'
+  if (ids.includes('trade_plumber')) return 'plumber'
+  if (ids.includes('trade_hvac')) return 'hvac'
+  if (ids.includes('trade_welding')) return 'welder'
+  if (ids.includes('trade_automotive')) return 'automotive'
+  return ''
+})
+
+const educationScene = computed<BackdropScene | null>(() => {
+  const ids = educationSelections.value.map(card => card.id)
+  if (ids.includes('self_coding')) return 'self-coding'
+  if (ids.includes('self_language')) return 'self-language'
+  if (ids.includes('self_cooking')) return 'self-cooking'
+  if (ids.includes('self_music')) return 'self-music'
+  if (ids.includes('self_photography')) return 'self-photography'
+  if (ids.includes('edu_self')) return 'self-study'
+  if (
+    eliteSchoolApplications.value.edu_harvard === 'admitted' &&
+    ids.some(id => id === 'edu_harvard' || id.startsWith('harvard_'))
+  ) return 'harvard'
+  if (
+    eliteSchoolApplications.value.edu_mit === 'admitted' &&
+    ids.some(id => id === 'edu_mit' || id.startsWith('mit_'))
+  ) return 'mit'
+  if (ids.some(id => id === 'edu_community' || id.startsWith('cc_'))) return 'community-college'
+  if (ids.some(id =>
+    id === 'edu_university' ||
+    id === 'edu_graduate' ||
+    id.startsWith('uni_') ||
+    id.startsWith('grad_')
+  )) return 'university'
+  if (ids.some(id => id === 'edu_trade' || id.startsWith('trade_'))) return 'trade-school'
+  return null
+})
+
+const jobTheme = computed<JobTheme | null>(() => {
+  const ids = incomeSelections.value.map(card => card.id)
+  if (ids.includes('work_none')) return null
+
+  const selectedJob = [...ids].reverse().find(id =>
+    id.startsWith('job_') || id.startsWith('pt_') || id.startsWith('intern_')
+  )
+
+  if (!selectedJob) {
+    return ids.some(id => ['income_work', 'full_time_job', 'part_time_job', 'internship'].includes(id))
+      ? 'generic'
+      : null
+  }
+
+  if (['job_retail', 'pt_retail'].includes(selectedJob)) return 'retail'
+  if (selectedJob === 'job_fastfood') return 'restaurant'
+  if (selectedJob === 'pt_barista') return 'cafe'
+  if (selectedJob === 'job_warehouse') return 'warehouse'
+  if (selectedJob === 'job_callcenter') return 'call-center'
+  if (['job_office', 'job_sales', 'job_executive'].includes(selectedJob)) return 'office'
+  if (
+    selectedJob === 'job_technician' ||
+    selectedJob === 'job_startup_founder' ||
+    selectedJob === 'job_big_tech' ||
+    selectedJob === 'intern_tech' ||
+    selectedJob.startsWith('job_tech')
+  ) return 'tech'
+  if (selectedJob === 'job_doctor' || selectedJob.startsWith('job_nurse')) return 'healthcare'
+  if (selectedJob === 'job_wall_street' || selectedJob === 'intern_finance' || selectedJob.startsWith('job_accountant')) return 'finance'
+  if (selectedJob === 'job_professor' || selectedJob === 'pt_tutor' || selectedJob.startsWith('job_teacher')) return 'education'
+  if (selectedJob.startsWith('job_engineer')) return 'engineering'
+  if (selectedJob.startsWith('job_electrician')) return 'electrician'
+  if (selectedJob.startsWith('job_plumber')) return 'plumber'
+  if (selectedJob.startsWith('job_mechanic')) return 'mechanic'
+  if (selectedJob === 'job_lawyer') return 'legal'
+  if (selectedJob === 'job_poker_player') return 'casino'
+  if (selectedJob === 'job_actor') return 'film'
+  if (selectedJob === 'job_politician') return 'government'
+  if (selectedJob === 'pt_rideshare') return 'driving'
+  if (selectedJob === 'pt_freelance') return 'remote'
+  if (selectedJob === 'intern_marketing') return 'marketing'
+  if (selectedJob === 'intern_research') return 'laboratory'
+  if (selectedJob === 'intern_nonprofit') return 'nonprofit'
+  return 'generic'
+})
+
+const housingScene = computed<LifestyleScene>(() => {
+  const ids = expenseSelections.value.map(card => card.id)
+  if (ids.includes('housing_parents')) return 'housing-parents'
+  if (ids.includes('housing_roommates')) return 'housing-roommates'
+  if (ids.includes('housing_rent_nice')) return 'housing-nice'
+  if (ids.includes('housing_mortgage')) return 'housing-home'
+  return 'housing-budget'
+})
+
+const lifestyleScene = computed<LifestyleScene | null>(() => {
+  if (selectionPhase.value !== 'expenses') return null
+
+  const ids = expenseSelections.value.map(card => card.id)
+  if (activeTopLevelCategory.value === 'expense_housing') {
+    return housingScene.value
+  }
+
+  if (activeTopLevelCategory.value === 'expense_transport') {
+    if (ids.includes('transport_walk')) return 'transport-walk'
+    if (ids.includes('transport_public')) return 'transport-public'
+    if (ids.includes('transport_new_car')) return 'transport-new'
+    if (ids.includes('transport_luxury')) return 'transport-luxury'
+    return 'transport-used'
+  }
+
+  if (['expense_food', 'expense_insurance', 'expense_fun', 'expense_other'].includes(activeTopLevelCategory.value ?? '')) {
+    return housingScene.value
+  }
+
+  return null
+})
+
+const expenseItemsTheme = computed(() => {
+  if (selectionPhase.value !== 'expenses') return ''
+
+  const categoryPrefixes: Record<string, string> = {
+    expense_food: 'food_',
+    expense_insurance: 'insurance_',
+    expense_fun: 'fun_',
+    expense_other: 'other_',
+  }
+  const prefix = categoryPrefixes[activeTopLevelCategory.value ?? '']
+  if (!prefix) return ''
+
+  return expenseSelections.value.find(card => card.id.startsWith(prefix))?.id ?? ''
+})
+
+const backdropScene = computed<BackdropScene>(() => {
+  if (jobTheme.value) return 'workplace'
+  return educationScene.value ?? locationScene.value
+})
+
+const selectedCountryFlag = computed(() => {
+  if (selectedCountry.value) return countryFlags[selectedCountry.value.id] ?? ''
+
+  const isPreviewingNewCountry = locationSelections.value.some(card => card.id === 'loc_abroad')
+  if (isPreviewingNewCountry || locationScene.value !== 'country') return ''
+
+  return committedCountryId.value ? countryFlags[committedCountryId.value] ?? '' : ''
+})
 
 onMounted(() => {
   if (phase.value === 'idle') {
@@ -173,23 +383,54 @@ function onPlayAgain() {
     <ResumeModal v-if="showResume" @close="showResume = false" />
     <AchievementsModal v-if="showAchievements" @close="showAchievements = false" />
 
-    <div class="game-container" v-if="phase === 'choosing'">
-      <header class="top-bar">
-        <div class="stage-info">
+    <div class="game-shell" v-if="phase === 'choosing'">
+      <aside class="avatar-panel">
+        <LifestyleBackdrop
+          v-if="lifestyleScene && lifestyleScene !== 'housing-parents'"
+          class="game-home"
+          :scene="lifestyleScene"
+        />
+        <HomeBackdrop
+          v-else-if="lifestyleScene === 'housing-parents'"
+          class="game-home"
+          scene="home"
+        />
+        <WorkBackdrop
+          v-else-if="backdropScene === 'workplace'"
+          class="game-home"
+          :theme="jobTheme ?? 'generic'"
+        />
+        <HomeBackdrop
+          v-else
+          class="game-home"
+          :scene="backdropScene"
+          :country-flag="selectedCountryFlag"
+          :trade-focus="tradeFocus"
+        />
+        <ExpenseItemsOverlay v-if="expenseItemsTheme" :theme="expenseItemsTheme" />
+        <div class="avatar-stage-copy">
+          <span class="avatar-kicker">Your LifeRun</span>
           <span class="stage-name">{{ currentStage.name }}</span>
           <span class="stage-age">Ages {{ currentStage.ageRange }}</span>
-          <div class="header-buttons">
-            <button class="resume-btn" @click="showResume = true">
-              📄 Resume
-            </button>
-            <button class="achievements-btn" @click="showAchievements = true">
-              🏆 Achievements
-            </button>
-          </div>
         </div>
-        <StatsBar />
-        <ManaBar />
-      </header>
+        <div class="avatar-wrap">
+          <AvatarPortrait :size="310" />
+        </div>
+        <div class="header-buttons">
+          <button class="resume-btn" @click="showResume = true">
+            📄 Resume
+          </button>
+          <button class="achievements-btn" @click="showAchievements = true">
+            🏆 Achievements
+          </button>
+        </div>
+      </aside>
+
+      <section class="game-container">
+        <header class="top-bar">
+          <StatsBar />
+          <ManaBar />
+        </header>
 
       <div class="finance-section">
         <FinanceBar />
@@ -321,7 +562,7 @@ function onPlayAgain() {
         </div>
       </section>
 
-      <footer class="bottom-bar">
+        <footer class="bottom-bar">
         <button
           v-if="canGoNext && !showSummary && selectionPhase !== 'decisions'"
           class="nav-btn next-btn"
@@ -355,7 +596,8 @@ function onPlayAgain() {
         >
           Live This Chapter
         </button>
-      </footer>
+        </footer>
+      </section>
     </div>
 
     <div class="footer-info">
@@ -372,16 +614,102 @@ function onPlayAgain() {
   display: flex;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: #fff;
-  padding: 1rem;
+  padding: 0;
   overflow: hidden;
+}
+
+.game-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
+  min-height: 100vh;
+}
+
+.avatar-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 100vh;
+  padding: 2rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(233, 69, 96, 0.18), transparent 42%),
+    linear-gradient(145deg, rgba(7, 12, 29, 0.92), rgba(24, 37, 73, 0.72));
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.avatar-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 7%;
+  width: min(72%, 430px);
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.24);
+  filter: blur(12px);
+}
+
+.game-home {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.82;
+}
+
+.avatar-stage-copy {
+  position: absolute;
+  z-index: 2;
+  top: 2rem;
+  left: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(11, 16, 35, 0.7);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.avatar-kicker {
+  margin-bottom: 0.3rem;
+  color: #f97316;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.avatar-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(78vh, 680px);
+  width: 100%;
+}
+
+.avatar-panel .header-buttons {
+  position: absolute;
+  z-index: 2;
+  bottom: 1.5rem;
 }
 
 .game-container {
   width: 100%;
-  height: 100%;
+  max-height: 100vh;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
 .top-bar {
@@ -389,13 +717,6 @@ function onPlayAgain() {
   flex-direction: column;
   gap: 0.5rem;
   align-items: center;
-}
-
-.stage-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 0.25rem;
 }
 
 .stage-name {
@@ -467,14 +788,15 @@ function onPlayAgain() {
 .phase-tabs {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  max-width: 100%;
 }
 
 .phase-tab {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.4rem 0.75rem;
+  padding: 0.4rem 0.5rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -681,6 +1003,58 @@ function onPlayAgain() {
   bottom: 1rem;
   left: 1rem;
   z-index: 10;
+}
+
+@media (max-width: 1050px) {
+  .phase-label,
+  .phase-arrow {
+    display: none;
+  }
+
+  .phase-tab {
+    padding: 0.45rem 0.65rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .game-view {
+    overflow-y: auto;
+  }
+
+  .game-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-panel {
+    min-height: 70vh;
+    height: 70vh;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .avatar-wrap {
+    height: 58vh;
+  }
+
+  .avatar-stage-copy {
+    top: 1.25rem;
+    left: 1.25rem;
+  }
+
+  .avatar-panel .header-buttons {
+    bottom: 0.8rem;
+  }
+
+  .game-container {
+    max-height: none;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .phase-label,
+  .phase-arrow {
+    display: inline;
+  }
 }
 
 .discord-link {

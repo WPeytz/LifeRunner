@@ -54,8 +54,9 @@ const projectedWealthChangePerYear = computed(() => {
 // Cash Flow represents the projected change multiplied by years in this stage plus investment returns
 const cashFlow = computed(() => projectedWealthChangePerYear.value * stageYears.value + projectedInvestmentReturns.value)
 
-// Net Worth represents accumulated wealth + projected change for this period
-const netWorth = computed(() => stats.value.wealth + cashFlow.value)
+// Net worth is the player's accumulated wealth. Cash flow is shown separately
+// as a projection for the current stage and is only applied once the stage is played.
+const netWorth = computed(() => stats.value.wealth)
 </script>
 
 <template>

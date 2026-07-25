@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AchievementsModal from '@/components/game/AchievementsModal.vue'
 import AuthModal from '@/components/common/AuthModal.vue'
+import AvatarCreator from '@/components/avatar/AvatarCreator.vue'
 import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
 
@@ -12,11 +13,17 @@ const { user, isAuthenticated } = storeToRefs(authStore)
 
 const showAchievements = ref(false)
 const showAuthModal = ref(false)
+const showAvatarCreator = ref(false)
 const showIntro = ref(false)
 const introFading = ref(false)
 const authMode = ref<'signin' | 'signup'>('signin')
 
 function startGame() {
+  showAvatarCreator.value = true
+}
+
+function beginLife() {
+  showAvatarCreator.value = false
   showIntro.value = true
 
   // Show the intro text briefly, then go straight to the game
@@ -84,8 +91,14 @@ async function handleSignOut() {
       @authenticated="onAuthenticated"
     />
 
+    <AvatarCreator
+      v-if="showAvatarCreator"
+      @back="showAvatarCreator = false"
+      @confirm="beginLife"
+    />
+
     <!-- Intro Screen -->
-    <div v-if="showIntro" class="intro-content" :class="{ 'fade-out': introFading }">
+    <div v-else-if="showIntro" class="intro-content" :class="{ 'fade-out': introFading }">
       <div class="intro-text">
         <p class="intro-line">You're 18, broke, and full of potential.</p>
         <p class="intro-line highlight">Your life begins with a choice.</p>
